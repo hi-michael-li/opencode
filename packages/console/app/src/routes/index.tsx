@@ -99,6 +99,9 @@ export default function Home() {
                   <Tabs.Trigger value="paru" data-slot="tab">
                     paru
                   </Tabs.Trigger>
+                  <Tabs.Trigger value="docker" data-slot="tab">
+                    docker
+                  </Tabs.Trigger>
                   <Tabs.Indicator />
                 </Tabs.List>
                 <div data-slot="panels">
@@ -145,6 +148,15 @@ export default function Home() {
                       <span>
                         <span data-slot="protocol">paru -S </span>
                         <span data-slot="highlight">opencode</span>
+                      </span>
+                      <CopyStatus />
+                    </button>
+                  </Tabs.Content>
+                  <Tabs.Content as="pre" data-slot="panel" value="docker">
+                    <button data-copy data-slot="command" onClick={handleCopyClick}>
+                      <span>
+                        <span data-slot="protocol">docker run -it --rm </span>
+                        <span data-slot="highlight">ghcr.io/sst/opencode</span>
                       </span>
                       <CopyStatus />
                     </button>
