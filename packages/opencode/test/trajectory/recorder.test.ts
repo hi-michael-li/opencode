@@ -235,7 +235,7 @@ describe("TrajectoryRecorder", () => {
     expect(events[1].sessionID).toBe("session-2")
   })
 
-  test("should throw error if recording fails", async () => {
+  test("should preserve buffer on recording failures for retry", async () => {
     const sessionID = "test-session"
     const invalidPath = "/invalid/nonexistent/path/test.jsonl"
 
@@ -245,17 +245,18 @@ describe("TrajectoryRecorder", () => {
       filePath: invalidPath,
     })
 
-    // Should throw on first write
-    await expect(
-      TrajectoryRecorder.record(sessionID, {
-        type: "session_start",
-        timestamp: Date.now(),
-        sessionID,
-        agent: "general",
-        model: { provider: "anthropic", id: "claude-4" },
-        workingDirectory: "/test",
-      }),
-    ).rejects.toThrow()
+    // Recording should not throw - errors are caught to preserve buffer for retry
+    await TrajectoryRecorder.record(sessionID, {
+      type: "session_start",
+      timestamp: Date.now(),
+      sessionID,
+      agent: "general",
+      model: { provider: "anthropic", id: "claude-4" },
+      workingDirectory: "/test",
+    })
+
+    // Session should still be recording (buffer preserved)
+    expect(TrajectoryRecorder.isRecording(sessionID)).toBe(true)
   })
 
   test("should throw if recording to session that hasn't started", async () => {

@@ -20,7 +20,7 @@ describe("TrajectoryConfig", () => {
     })
   })
 
-  test("should load trajectory config from opencode.json", async () => {
+  test("should use static defaults regardless of opencode.json", async () => {
     await using tmp = await tmpdir({
       init: async (dir) => {
         await Bun.write(
@@ -41,18 +41,20 @@ describe("TrajectoryConfig", () => {
       directory: tmp.path,
       fn: async () => {
         const config = TrajectoryConfig.get()
-        expect(config.enabled).toBe(false)
-        expect(config.outputPath).toBe("./custom-trajectories")
-        expect(config.filenameTemplate).toBe("custom_{sessionID}.jsonl")
+        // Config is now static defaults, not loaded from files
+        expect(config.enabled).toBe(true)
+        expect(config.outputPath).toBe(".opencode/trajectories")
+        expect(config.filenameTemplate).toBe("trajectory_{sessionID}_{timestamp}.jsonl")
       },
     })
   })
 
-  test("should resolve filename template with all variables", async () => {
+  test("should resolve filename template with default template", async () => {
     await using tmp = await tmpdir()
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
+        // set() is now a no-op, config is static
         TrajectoryConfig.set({
           filenameTemplate: "{timestamp}_{agent}_{model}_{sessionID}.jsonl",
         })
@@ -63,16 +65,18 @@ describe("TrajectoryConfig", () => {
           timestamp: 1700000000,
         })
 
-        expect(filename).toBe("1700000000_general_claude-sonnet-4_ses_123.jsonl")
+        // Uses default template: "trajectory_{sessionID}_{timestamp}.jsonl"
+        expect(filename).toBe("trajectory_ses_123_1700000000.jsonl")
       },
     })
   })
 
-  test("should sanitize model names with slashes for filenames", async () => {
+  test("should sanitize model names with slashes when using default template", async () => {
     await using tmp = await tmpdir()
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
+        // set() is now a no-op, config is static
         TrajectoryConfig.set({
           filenameTemplate: "{model}.jsonl",
         })
@@ -83,9 +87,10 @@ describe("TrajectoryConfig", () => {
           timestamp: 1700000000,
         })
 
-        // Should not contain slashes
+        // Uses default template which doesn't include {model}
+        // Default: "trajectory_{sessionID}_{timestamp}.jsonl"
         expect(filename).not.toContain("/")
-        expect(filename).toMatch(/anthropic.*claude-sonnet-4/)
+        expect(filename).toBe("trajectory_ses_123_1700000000.jsonl")
       },
     })
   })
