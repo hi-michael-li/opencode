@@ -94,7 +94,11 @@ PLATFORM=$(detect_platform)
 info "Detected platform: $PLATFORM"
 
 # Determine file extension
-EXT="zip"
+if [[ "$PLATFORM" == linux-* ]]; then
+    EXT="tar.gz"
+else
+    EXT="zip"
+fi
 
 # Construct download URL
 DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/opencode-${PLATFORM}.${EXT}"
@@ -110,10 +114,14 @@ if ! curl -fsSL "$DOWNLOAD_URL" -o "$TMP_DIR/opencode.${EXT}"; then
 fi
 
 info "Extracting binary..."
-if ! command -v unzip &> /dev/null; then
-    error "unzip is required but not installed"
+if [[ "$EXT" == "zip" ]]; then
+    if ! command -v unzip &> /dev/null; then
+        error "unzip is required but not installed"
+    fi
+    unzip -q -o "$TMP_DIR/opencode.${EXT}" -d "$TMP_DIR"
+else
+    tar -xzf "$TMP_DIR/opencode.${EXT}" -C "$TMP_DIR"
 fi
-unzip -q -o "$TMP_DIR/opencode.${EXT}" -d "$TMP_DIR"
 
 # Create install directory
 info "Installing to $INSTALL_DIR..."
