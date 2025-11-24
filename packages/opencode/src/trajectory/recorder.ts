@@ -170,7 +170,6 @@ export namespace TrajectoryRecorder {
 
   function shouldFlush(rec: Recorder) {
     if (rec.options.flushStrategy === "immediate") return true
-    if (!rec.stream && rec.options.flushStrategy === "end_of_stream") return true
     return rec.buffer.length >= rec.options.bufferSize
   }
 
