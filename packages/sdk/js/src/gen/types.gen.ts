@@ -527,6 +527,11 @@ export type Session = {
   projectID: string
   directory: string
   parentID?: string
+  agent?: string
+  model?: {
+    providerID: string
+    modelID: string
+  }
   summary?: {
     additions: number
     deletions: number
@@ -1704,6 +1709,9 @@ export type SessionCreateData = {
   body?: {
     parentID?: string
     title?: string
+    agent?: string
+    provider?: string
+    model?: string
   }
   path?: never
   query?: {
