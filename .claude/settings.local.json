@@ -9,7 +9,8 @@
       "Bash(export OPENCODE_VERSION=\"1.0.105-fork\")",
       "Bash(export OPENCODE_CHANNEL=\"fork\")",
       "Bash(bun run:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(bunx tsc:*)"
     ],
     "deny": [],
     "ask": []
