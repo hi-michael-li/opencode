@@ -10,7 +10,8 @@
       "Bash(export OPENCODE_CHANNEL=\"fork\")",
       "Bash(bun run:*)",
       "Bash(cat:*)",
-      "Bash(bunx tsc:*)"
+      "Bash(bunx tsc:*)",
+      "Bash(rm:*)"
     ],
     "deny": [],
     "ask": []
