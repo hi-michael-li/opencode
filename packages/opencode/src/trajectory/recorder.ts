@@ -1,10 +1,8 @@
-import fs from "fs/promises"
 import path from "path"
 import type { Trajectory } from "./types"
 import { TrajectoryConfig } from "./config"
 
 type Recorder = {
-  id: string
   path: string
   buffer: Trajectory.Event[]
   stream: boolean
@@ -28,7 +26,6 @@ export namespace TrajectoryRecorder {
     const target = options.filePath ?? resolvePath(sessionID, options.agent, options.model, cfg)
     const disabled = cfg.enabled === false
     const rec: Recorder = {
-      id: sessionID,
       path: target,
       buffer: [],
       stream: false,
@@ -40,7 +37,7 @@ export namespace TrajectoryRecorder {
 
   export async function record(sessionID: string, event: Trajectory.Event): Promise<void> {
     const rec = recorders.get(sessionID)
-    if (!rec) throw new Error(`Trajectory recorder not started for session ${sessionID}`)
+    if (!rec) return
     if (rec.disabled) return
     rec.buffer.push(event)
     if (shouldFlush(rec)) await flush(rec)
@@ -59,13 +56,13 @@ export namespace TrajectoryRecorder {
 
   export function markStreamStart(sessionID: string): void {
     const rec = recorders.get(sessionID)
-    if (!rec) throw new Error(`Trajectory recorder not started for session ${sessionID}`)
+    if (!rec) return
     rec.stream = true
   }
 
   export async function markStreamEnd(sessionID: string): Promise<void> {
     const rec = recorders.get(sessionID)
-    if (!rec) throw new Error(`Trajectory recorder not started for session ${sessionID}`)
+    if (!rec) return
     rec.stream = false
     if (rec.disabled) return
     if (rec.options.flushStrategy === "end_of_stream" || rec.buffer.length >= rec.options.bufferSize) {
@@ -179,12 +176,11 @@ export namespace TrajectoryRecorder {
     const chunk = lines.join("\n") + "\n"
 
     try {
-      await fs.mkdir(path.dirname(rec.path), { recursive: true })
-      await fs.appendFile(rec.path, chunk)
-      // Only clear buffer after successful write
+      const file = Bun.file(rec.path)
+      const existing = await file.exists() ? await file.text() : ""
+      await Bun.write(rec.path, existing + chunk)
       rec.buffer = []
     } catch (error) {
-      // Keep buffer intact on failure to retry later
       console.error("Failed to flush trajectory buffer", error)
     }
   }

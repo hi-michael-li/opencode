@@ -54,11 +54,6 @@ describe("TrajectoryConfig", () => {
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        // set() is now a no-op, config is static
-        TrajectoryConfig.set({
-          filenameTemplate: "{timestamp}_{agent}_{model}_{sessionID}.jsonl",
-        })
-
         const filename = TrajectoryConfig.resolveFilename("ses_123", {
           agent: "general",
           model: "claude-sonnet-4",
@@ -71,24 +66,19 @@ describe("TrajectoryConfig", () => {
     })
   })
 
-  test("should sanitize model names with slashes when using default template", async () => {
+  test("should sanitize model names with slashes in resolveFilename", async () => {
     await using tmp = await tmpdir()
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        // set() is now a no-op, config is static
-        TrajectoryConfig.set({
-          filenameTemplate: "{model}.jsonl",
-        })
-
         const filename = TrajectoryConfig.resolveFilename("ses_123", {
           agent: "general",
           model: "anthropic/claude-sonnet-4",
           timestamp: 1700000000,
         })
 
-        // Uses default template which doesn't include {model}
-        // Default: "trajectory_{sessionID}_{timestamp}.jsonl"
+        // Default template doesn't include {model}, but resolveFilename
+        // still sanitizes model in case template is changed later
         expect(filename).not.toContain("/")
         expect(filename).toBe("trajectory_ses_123_1700000000.jsonl")
       },
