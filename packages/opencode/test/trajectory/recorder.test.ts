@@ -429,7 +429,10 @@ describe("TrajectoryRecorder", () => {
     expect(content.trim().length).toBeGreaterThan(0)
 
     // Different path should not exist
-    const differentExists = await fs.access(path.join(tmp.path, "different.jsonl")).then(() => true).catch(() => false)
+    const differentExists = await fs
+      .access(path.join(tmp.path, "different.jsonl"))
+      .then(() => true)
+      .catch(() => false)
     expect(differentExists).toBe(false)
   })
 })

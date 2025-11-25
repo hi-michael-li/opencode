@@ -177,7 +177,7 @@ export namespace TrajectoryRecorder {
 
     try {
       const file = Bun.file(rec.path)
-      const existing = await file.exists() ? await file.text() : ""
+      const existing = (await file.exists()) ? await file.text() : ""
       await Bun.write(rec.path, existing + chunk)
       rec.buffer = []
     } catch (error) {

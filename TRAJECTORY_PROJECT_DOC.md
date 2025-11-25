@@ -5,6 +5,7 @@ Records complete agent execution traces to JSONL files for accurate token usage 
 ## Purpose
 
 The primary use case is **measuring token usage** that the agent consumes. Each LLM interaction is recorded with detailed token breakdowns:
+
 - Input/output tokens
 - Reasoning tokens
 - Cache read/write tokens
@@ -22,14 +23,14 @@ packages/opencode/src/trajectory/
 
 ## Event Types
 
-| Event | Description |
-|-------|-------------|
-| `session_start` | Agent session initialization with model info |
-| `llm_interaction` | LLM call with full token usage breakdown |
-| `stream_event` | Granular streaming events (reasoning, response, tool calls) |
-| `tool_execution` | Tool invocations with timing and results |
-| `agent_step` | Agent loop state transitions |
-| `compaction` | Context compaction events |
+| Event             | Description                                                 |
+| ----------------- | ----------------------------------------------------------- |
+| `session_start`   | Agent session initialization with model info                |
+| `llm_interaction` | LLM call with full token usage breakdown                    |
+| `stream_event`    | Granular streaming events (reasoning, response, tool calls) |
+| `tool_execution`  | Tool invocations with timing and results                    |
+| `agent_step`      | Agent loop state transitions                                |
+| `compaction`      | Context compaction events                                   |
 
 ## Token Usage Schema
 
@@ -51,6 +52,7 @@ usage: {
 ## Output
 
 Trajectories are written to `.opencode/trajectories/` as JSONL files:
+
 ```
 trajectory_{sessionID}_{timestamp}.jsonl
 ```
@@ -60,6 +62,7 @@ Each line is a self-contained JSON event with timestamp and session ID.
 ## Integration Points
 
 The recorder hooks into:
+
 - **prompt.ts** — Session start/stop, agent steps, tool executions, title generation
 - **processor.ts** — Stream events during LLM streaming
 - **compaction.ts** — Context compaction events
@@ -86,6 +89,7 @@ await TrajectoryRecorder.stop(sessionID)
 ## Configuration
 
 Static defaults (no runtime configuration):
+
 - **enabled**: `true`
 - **outputPath**: `.opencode/trajectories`
 - **bufferSize**: `1000` events
