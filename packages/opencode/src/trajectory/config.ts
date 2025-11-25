@@ -1,6 +1,3 @@
-import path from "path"
-import { Instance } from "../project/instance"
-
 export namespace TrajectoryConfig {
   export interface Options {
     enabled: boolean
@@ -22,10 +19,6 @@ export namespace TrajectoryConfig {
 
   export function get(): Options {
     return { ...DEFAULTS }
-  }
-
-  export function set(options: Partial<Options>): void {
-    // No-op: configuration is now static defaults only
   }
 
   export function resolveFilename(
