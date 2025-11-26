@@ -66,6 +66,25 @@ describe("TrajectoryConfig", () => {
     })
   })
 
+  test("should prefer env override when present", async () => {
+    await using tmp = await tmpdir()
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const previous = process.env["OPENCODE_TRAJECTORY_INSTANCE_ID"]
+        process.env["OPENCODE_TRAJECTORY_INSTANCE_ID"] = "inst_456"
+        const filename = TrajectoryConfig.resolveFilename("ses_123", {
+          agent: "general",
+          model: "claude-sonnet-4",
+          timestamp: 1700000000,
+        })
+        if (previous === undefined) delete process.env["OPENCODE_TRAJECTORY_INSTANCE_ID"]
+        if (previous !== undefined) process.env["OPENCODE_TRAJECTORY_INSTANCE_ID"] = previous
+        expect(filename).toBe("trajectory_inst_456_1700000000.jsonl")
+      },
+    })
+  })
+
   test("should sanitize model names with slashes in resolveFilename", async () => {
     await using tmp = await tmpdir()
     await Instance.provide({
