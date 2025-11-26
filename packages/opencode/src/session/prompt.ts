@@ -1872,10 +1872,13 @@ export namespace SessionPrompt {
     const now = Date.now()
     const created = session?.time.created ?? now
     const dir = path.isAbsolute(cfg.outputPath) ? cfg.outputPath : path.join(Instance.directory, cfg.outputPath)
+    const override = process.env["OPENCODE_TRAJECTORY_INSTANCE_ID"]?.trim()
+    const identifier = override && override.length > 0 ? override : input.sessionID
     const filename = TrajectoryConfig.resolveFilename(input.sessionID, {
       agent: agentName,
       model: session?.model?.modelID ?? model.modelID,
       timestamp: created,
+      identifier,
     })
     const filePath = path.join(dir, filename)
     TrajectoryRecorder.start(input.sessionID, {

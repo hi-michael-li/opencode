@@ -27,12 +27,15 @@ export namespace TrajectoryConfig {
       agent: string
       model: string
       timestamp: number
+      identifier?: string
     },
   ): string {
     const safeModel = context.model.replace(/[\\/]/g, "-")
+    const candidate = context.identifier ?? process.env["OPENCODE_TRAJECTORY_INSTANCE_ID"]?.trim()
+    const identifier = candidate && candidate.length > 0 ? candidate : sessionID
     const template = get().filenameTemplate
     return template
-      .replaceAll("{sessionID}", sessionID)
+      .replaceAll("{sessionID}", identifier)
       .replaceAll("{agent}", context.agent)
       .replaceAll("{model}", safeModel)
       .replaceAll("{timestamp}", String(context.timestamp))
