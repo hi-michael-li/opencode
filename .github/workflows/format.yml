@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 jobs:
   format:
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:

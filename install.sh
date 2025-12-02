@@ -3,7 +3,7 @@ set -e
 
 # Default values
 REPO="hi-michael-li/opencode"
-VERSION="${VERSION:-v1.0.105-trajectory}"
+VERSION="${VERSION:-v1.0.126-trajectory}"
 INSTALL_DIR="${OPENCODE_INSTALL_DIR:-$HOME/.opencode/bin}"
 
 # Colors for output
@@ -28,7 +28,7 @@ error() {
 # Detect OS and architecture
 detect_platform() {
     local os arch
-    
+
     case "$(uname -s)" in
         Darwin*)
             os="darwin"
@@ -43,7 +43,7 @@ detect_platform() {
             error "Unsupported operating system: $(uname -s)"
             ;;
     esac
-    
+
     case "$(uname -m)" in
         x86_64|amd64)
             arch="x64"
@@ -55,7 +55,7 @@ detect_platform() {
             error "Unsupported architecture: $(uname -m)"
             ;;
     esac
-    
+
     echo "${os}-${arch}"
 }
 
@@ -74,7 +74,7 @@ while [[ $# -gt 0 ]]; do
             echo "Usage: install.sh [OPTIONS]"
             echo ""
             echo "Options:"
-            echo "  --version VERSION       Install specific version (default: v1.0.105-trajectory)"
+            echo "  --version VERSION       Install specific version (default: v1.0.126-trajectory)"
             echo "  --install-dir DIR       Installation directory (default: ~/.opencode/bin)"
             echo "  --help                  Show this help message"
             echo ""

@@ -337,6 +337,7 @@ export namespace SessionCompaction {
         providerID: z.string(),
         modelID: z.string(),
       }),
+      auto: z.boolean(),
     }),
     async (input) => {
       const msg = await Session.updateMessage({
@@ -354,6 +355,7 @@ export namespace SessionCompaction {
         messageID: msg.id,
         sessionID: msg.sessionID,
         type: "compaction",
+        auto: input.auto,
       })
     },
   )
