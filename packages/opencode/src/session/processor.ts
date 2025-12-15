@@ -13,6 +13,9 @@ import { Plugin } from "@/plugin"
 import type { Provider } from "@/provider/provider"
 import { LLM } from "./llm"
 import { Config } from "@/config/config"
+import { TrajectoryRecorder } from "../trajectory/recorder"
+import { TrajectoryConfig } from "../trajectory/config"
+import type { Trajectory } from "../trajectory/types"
 
 export namespace SessionProcessor {
   const DOOM_LOOP_THRESHOLD = 3
@@ -26,6 +29,7 @@ export namespace SessionProcessor {
     sessionID: string
     model: Provider.Model
     abort: AbortSignal
+    step?: number
   }) {
     const toolcalls: Record<string, MessageV2.ToolPart> = {}
     let snapshot: string | undefined
@@ -36,12 +40,30 @@ export namespace SessionProcessor {
       get message() {
         return input.assistantMessage
       },
+      step: input.step ?? 0,
       partFromToolCall(toolCallID: string) {
         return toolcalls[toolCallID]
       },
       async process(streamInput: LLM.StreamInput) {
         log.info("process")
         const shouldBreak = (await Config.get()).experimental?.continue_loop_on_deny !== true
+        const streamRecording =
+          TrajectoryRecorder.isRecording(input.sessionID) && TrajectoryConfig.get().captureStreamEvents
+        const recordStream = async (
+          eventType: Trajectory.StreamEvent["eventType"],
+          data: Trajectory.StreamEvent["data"],
+        ) => {
+          if (!streamRecording) return
+          await TrajectoryRecorder.record(input.sessionID, {
+            type: "stream_event",
+            timestamp: Date.now(),
+            sessionID: input.sessionID,
+            messageID: input.assistantMessage.id,
+            step: input.step ?? 0,
+            eventType,
+            data,
+          })
+        }
         while (true) {
           try {
             let currentText: MessageV2.TextPart | undefined
@@ -53,6 +75,7 @@ export namespace SessionProcessor {
               switch (value.type) {
                 case "start":
                   SessionStatus.set(input.sessionID, { type: "busy" })
+                  await recordStream("start", { phase: "turn" })
                   break
 
                 case "reasoning-start":
@@ -92,6 +115,7 @@ export namespace SessionProcessor {
                     }
                     if (value.providerMetadata) part.metadata = value.providerMetadata
                     await Session.updatePart(part)
+                    await recordStream("reasoning", { reasoning: part.text })
                     delete reasoningMap[value.id]
                   }
                   break
@@ -111,6 +135,11 @@ export namespace SessionProcessor {
                     },
                   })
                   toolcalls[value.id] = part as MessageV2.ToolPart
+                  await recordStream("tool-call", {
+                    toolName: value.toolName,
+                    toolCallId: value.id,
+                    input: {},
+                  })
                   break
 
                 case "tool-input-delta":
@@ -177,6 +206,11 @@ export namespace SessionProcessor {
                       }
                     }
                   }
+                  await recordStream("tool-call", {
+                    toolName: value.toolName,
+                    toolCallId: value.toolCallId,
+                    input: value.input,
+                  })
                   break
                 }
                 case "tool-result": {
@@ -200,6 +234,10 @@ export namespace SessionProcessor {
 
                     delete toolcalls[value.toolCallId]
                   }
+                  await recordStream("tool-result", {
+                    toolCallId: value.toolCallId,
+                    output: value.output.output,
+                  })
                   break
                 }
 
@@ -225,6 +263,10 @@ export namespace SessionProcessor {
                     }
                     delete toolcalls[value.toolCallId]
                   }
+                  await recordStream("tool-result", {
+                    toolCallId: value.toolCallId,
+                    output: (value.error as any)?.toString?.(),
+                  })
                   break
                 }
                 case "error":
@@ -239,6 +281,7 @@ export namespace SessionProcessor {
                     snapshot,
                     type: "step-start",
                   })
+                  await recordStream("step-start", { phase: "step" })
                   break
 
                 case "finish-step":
@@ -278,6 +321,10 @@ export namespace SessionProcessor {
                   SessionSummary.summarize({
                     sessionID: input.sessionID,
                     messageID: input.assistantMessage.parentID,
+                  })
+                  await recordStream("step-finish", {
+                    finishReason: value.finishReason,
+                    usage,
                   })
                   break
 
@@ -320,17 +367,20 @@ export namespace SessionProcessor {
                       { text: currentText.text },
                     )
                     currentText.text = textOutput.text
+                    const startTime = currentText.time?.start ?? Date.now()
                     currentText.time = {
-                      start: Date.now(),
+                      start: startTime,
                       end: Date.now(),
                     }
                     if (value.providerMetadata) currentText.metadata = value.providerMetadata
                     await Session.updatePart(currentText)
+                    await recordStream("response", { text: currentText.text })
                   }
                   currentText = undefined
                   break
 
                 case "finish":
+                  await recordStream("finish", {})
                   break
 
                 default:

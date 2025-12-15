@@ -13,9 +13,13 @@ import { Log } from "../util/log"
 import { SessionProcessor } from "./processor"
 import { fn } from "@/util/fn"
 import { Agent } from "@/agent/agent"
+import { TrajectoryRecorder } from "../trajectory/recorder"
+import { TrajectoryConfig } from "../trajectory/config"
 
 export namespace SessionCompaction {
   const log = Log.create({ service: "session.compaction" })
+  const shouldRecord = (sessionID: string) =>
+    TrajectoryConfig.get().enabled && TrajectoryRecorder.isRecording(sessionID)
 
   export const Event = {
     Compacted: BusEvent.define(
@@ -79,6 +83,19 @@ export namespace SessionCompaction {
         }
       }
       log.info("pruned", { count: toPrune.length })
+      if (shouldRecord(input.sessionID)) {
+        await TrajectoryRecorder.record(input.sessionID, {
+          type: "compaction",
+          timestamp: Date.now(),
+          sessionID: input.sessionID,
+          action: "prune",
+          pruneDetails: {
+            toolsPruned: toPrune.length,
+            tokensSaved: pruned,
+            oldestCompactedMessageID: toPrune.at(-1)?.messageID ?? "",
+          },
+        })
+      }
     }
   }
 
@@ -87,13 +104,42 @@ export namespace SessionCompaction {
     messages: MessageV2.WithParts[]
     sessionID: string
     abort: AbortSignal
-    auto: boolean
+    auto?: boolean
   }) {
     const userMessage = input.messages.findLast((m) => m.info.id === input.parentID)!.info as MessageV2.User
     const agent = await Agent.get("compaction")
     const model = agent.model
       ? await Provider.getModel(agent.model.providerID, agent.model.modelID)
       : await Provider.getModel(userMessage.model.providerID, userMessage.model.modelID)
+
+    if (shouldRecord(input.sessionID)) {
+      const tokenCount = input.messages
+        .filter((m) => m.info.role === "assistant")
+        .reduce((sum, msg) => {
+          const info = msg.info as MessageV2.Assistant
+          return (
+            sum +
+            (info.tokens?.input ?? 0) +
+            (info.tokens?.output ?? 0) +
+            (info.tokens?.cache.read ?? 0) +
+            (info.tokens?.cache.write ?? 0)
+          )
+        }, 0)
+      await TrajectoryRecorder.record(input.sessionID, {
+        type: "compaction",
+        timestamp: Date.now(),
+        sessionID: input.sessionID,
+        action: "start",
+        trigger: {
+          reason: "context_overflow",
+          messageCount: input.messages.length,
+          tokenCount,
+          contextLimit: model.limit.context,
+        },
+      })
+      TrajectoryRecorder.markStreamStart(input.sessionID)
+    }
+
     const msg = (await Session.updateMessage({
       id: Identifier.ascending("message"),
       role: "assistant",
@@ -124,6 +170,7 @@ export namespace SessionCompaction {
       sessionID: input.sessionID,
       model,
       abort: input.abort,
+      step: 0,
     })
     const result = await processor.process({
       user: userMessage,
@@ -146,6 +193,22 @@ export namespace SessionCompaction {
       ],
       model,
     })
+
+    if (shouldRecord(input.sessionID)) {
+      const now = Date.now()
+      await TrajectoryRecorder.markStreamEnd(input.sessionID)
+      await TrajectoryRecorder.record(input.sessionID, {
+        type: "compaction",
+        timestamp: now,
+        sessionID: input.sessionID,
+        action: "end",
+        result: {
+          success: result !== "stop",
+          newMessageCount: await Session.messages({ sessionID: input.sessionID }).then((all) => all.length),
+          tokenReduction: 0,
+        },
+      })
+    }
 
     if (result === "continue" && input.auto) {
       const continueMsg = await Session.updateMessage({
