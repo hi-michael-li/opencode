@@ -812,6 +812,9 @@ export class Session extends HeyApiClient {
       parentID?: string
       title?: string
       permission?: PermissionRuleset
+      agent?: string
+      provider?: string
+      model?: string
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -824,6 +827,9 @@ export class Session extends HeyApiClient {
             { in: "body", key: "parentID" },
             { in: "body", key: "title" },
             { in: "body", key: "permission" },
+            { in: "body", key: "agent" },
+            { in: "body", key: "provider" },
+            { in: "body", key: "model" },
           ],
         },
       ],
