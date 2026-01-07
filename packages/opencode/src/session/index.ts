@@ -42,6 +42,13 @@ export namespace Session {
       projectID: z.string(),
       directory: z.string(),
       parentID: Identifier.schema("session").optional(),
+      agent: z.string().optional(),
+      model: z
+        .object({
+          providerID: z.string(),
+          modelID: z.string(),
+        })
+        .optional(),
       summary: z
         .object({
           additions: z.number(),
@@ -129,6 +136,9 @@ export namespace Session {
         parentID: Identifier.schema("session").optional(),
         title: z.string().optional(),
         permission: Info.shape.permission,
+        agent: z.string().optional(),
+        provider: z.string().optional(),
+        model: z.string().optional(),
       })
       .optional(),
     async (input) => {
@@ -137,6 +147,9 @@ export namespace Session {
         directory: Instance.directory,
         title: input?.title,
         permission: input?.permission,
+        agent: input?.agent,
+        provider: input?.provider,
+        model: input?.model,
       })
     },
   )
@@ -184,6 +197,9 @@ export namespace Session {
     parentID?: string
     directory: string
     permission?: PermissionNext.Ruleset
+    agent?: string
+    provider?: string
+    model?: string
   }) {
     const result: Info = {
       id: Identifier.descending("session", input.id),
@@ -191,6 +207,14 @@ export namespace Session {
       projectID: Instance.project.id,
       directory: input.directory,
       parentID: input.parentID,
+      agent: input.agent,
+      model:
+        input.provider || input.model
+          ? {
+              providerID: input.provider ?? "",
+              modelID: input.model ?? "",
+            }
+          : undefined,
       title: input.title ?? createDefaultTitle(!!input.parentID),
       permission: input.permission,
       time: {
